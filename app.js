@@ -188,7 +188,7 @@ router.post("/auth", async (req, res) => {
 });
 
 
-  //댓글 목록 조회 (프론트에서 받아온 토큰으로.. 유저id를 찾아서 보내고 싶음 ㅠㅠ )
+  //댓글 목록 조회 (미해결 ㅠㅠ)
   router.get("/comments/:postId", async (req, res) => { 
     const { postId } = req.params;
 
