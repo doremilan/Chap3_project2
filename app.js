@@ -188,10 +188,10 @@ router.post("/auth", async (req, res) => {
 });
 
 
-  //댓글 목록 조회 (미해결 ㅠㅠ)
-  router.get("/comments/:postId", async (req, res) => { 
-    const { postId } = req.params;
-
+  //댓글 목록 조회
+  router.get("/comments/:_id", async (req, res) => { 
+    const postId = req.params._id;
+    console.log(postId)
     const comments = await Comments.find({ postId: postId }); 
     
     res.json({

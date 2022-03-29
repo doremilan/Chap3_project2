@@ -21,20 +21,37 @@
         const _id = urlParams.get("_id"); // URL의 쿼리스트링에서 '파라미터명'으로 조회된 첫번째 값을 리턴
         console.log(_id)
 
-        //이부분에 대한 설명 해주실수 있을까요..!! getSelf와 콜백함수에 대한 개념이 복잡한것같아요 ㅠㅠ
         let userId;
+
 
         $(document).ready(function () {
             show_detail();
 
-            if (localStorage.getItem("token")) {
+            if (!localStorage.getItem("token")) {
+                show_comments();
+                return;
+            } else {
                 getSelf(function (user) {
                     userId = user.userId;
-                    console.log(userId)
-                })
-            }        
-            show_comments();
+                    show_comments(userId);
+                    return;
+            })          
+        }
+    });
+
+
+        function getSelf(callback) {
+        $.ajax({
+            type: "GET",
+            url: "/api/users/me",
+            headers: {
+            authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            success: function (response) {
+                callback(response.user);
+            },
         });
+    };
 
 
         function show_detail() {
@@ -45,8 +62,6 @@
                 success: function (response) {
                     let rows = response['detail']
                     console.log(rows);
-
-                        // let articleId = rows['articleId']
                         let title = rows['title']
                         let writer = rows['writer']
                         let date = rows['date'].substring(0,11) //마지막 콤마는 지워줍니다.
@@ -104,64 +119,98 @@
             });
         }
 
-
-        //댓글 목록 조회: 비회원도 조회할 수 있도록 함(현재 로그인된 유저가 작성한 댓글의 경우, 수정 삭제버튼이 보여야 함..)
-        // 아래와 같은 방법으로 userId를 사용안하고.. 그냥 전체목록을 불러온 후, hide랑 show로 해결할수 있는지..?ㅠ
+        //댓글 조회
         function show_comments() {
-            const quaryString = window.location.search; 
-            console.log(quaryString)
-            const urlParams = new URLSearchParams(quaryString); 
-            console.log(urlParams)
-            const postId = urlParams.get("_id"); 
-            console.log(postId)
-
-            const token = localStorage.getItem("token");
-
             $.ajax({
                 type: "GET",
-                url: `/api/comments/${postId}`,
-                data: {}, 
-                success: function (response) { 
+                url: `/api/comments/${_id}`, // 위에서 추출한 값 전달
+                data: {},
+                success: function (response) {
                     let rows = response['comments']
-                    let tokenUserId = response['userId']
+                    let tokenUserId = userId
                     console.log(rows, tokenUserId);
+                    
+                    for (let i = rows.length-1; i > -1; i--) {
+                        let comment = rows[i]['comment']  
+                        let commentUserId = rows[i]['userId']
+                        console.log(comment, commentUserId)
 
-                    for (const commentObject of rows ) {
-                        postComment(commentObject, tokenUserId)
-                    }
-                },
-                error: function (error) {
-                    alert(error.responseJSON.errorMessage);
+                        if (tokenUserId === commentUserId) {
+                            let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">${comment}</h5>
+                                                    <a href="#" id="editComment" class="btn btn-primary">수정</a>
+                                                    <a href="#" id="deleteComment" class="btn btn-primary">삭제</a>
+                                                </div>
+                                            </div>    
+                            `
+                            $('#comment-box').append(temp_html)
+                        } else {
+                            let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
+                                <div class="card-body">
+                                    <h5 class="card-title">${comment}</h5>
+                                    <a href="#" id="editComment" class="btn btn-primary" style="display: none;">수정</a>
+                                    <a href="#" id="deleteComment" class="btn btn-primary" style="display: none;">삭제</a>
+                                </div>
+                             </div>    
+                            `
+                            $('#comment-box').append(temp_html) 
+                        } 
+                    }                                      
                 }
             });
         }
 
-        function postComment(commentObject, tokenUserId) {
-            const { _id, comment, userId, postId } = commentObject;
+        // function show_comments() {
+        //     const quaryString = window.location.search; 
+        //     console.log(quaryString)
+        //     const urlParams = new URLSearchParams(quaryString); 
+        //     console.log(urlParams)
+        //     const postId = urlParams.get("_id"); 
+        //     console.log(postId)
+
+        //     $.ajax({
+        //         type: "GET",
+        //         url: `/api/comments/${postId}`,
+        //         data: {}, 
+        //         success: function (response) { 
+        //             let rows = response['comments']
+        //             let tokenUserId = response['userId']
+        //             console.log(rows, tokenUserId);
+
+        //             for (const commentObject of rows ) {
+        //                 postComment(commentObject, tokenUserId)
+        //             }
+        //         },
+        //         error: function (error) {
+        //             alert(error.responseJSON.errorMessage);
+        //         }
+        //     });
+        // }
+
+        // function postComment(commentObject, tokenUserId) {
+        //     const { _id, comment, userId, postId } = commentObject;
             
-            if (userId === tokenUserId) { //유저 아이디와 댓글을 작성한 유저ID가 일치할 경우 수정 삭제 버튼이 보이게 함.. 이방법은 비효율적인지..ㅠㅠ
-                let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${comment}</h5>
-                                        <a href="#" class="btn btn-primary">수정</a>
-                                        <a href="#" class="btn btn-primary">삭제</a>
-                                    </div>
-                                 </div>    
-                        `
-                        $('#comment-box').append(temp_html)
-            } else {
-                let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${comment}</h5>
-                                    </div>
-                                 </div>    
-                        `
-                        $('#comment-box').append(temp_html)
-                }
-            }
-
-
-        
+        //     if (userId === tokenUserId) { //유저 아이디와 댓글을 작성한 유저ID가 일치할 경우 수정 삭제 버튼이 보이게 함.. 이방법은 비효율적인지..ㅠㅠ
+        //         let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
+        //                             <div class="card-body">
+        //                                 <h5 class="card-title">${comment}</h5>
+        //                                 <a href="#" class="btn btn-primary">수정</a>
+        //                                 <a href="#" class="btn btn-primary">삭제</a>
+        //                             </div>
+        //                          </div>    
+        //                 `
+        //                 $('#comment-box').append(temp_html)
+        //     } else {
+        //         let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
+        //                             <div class="card-body">
+        //                                 <h5 class="card-title">${comment}</h5>
+        //                             </div>
+        //                          </div>    
+        //                 `
+        //                 $('#comment-box').append(temp_html)
+        //         }
+        //     }        
     </script>
 
 </head>
