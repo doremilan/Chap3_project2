@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lan's Blog</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="/css/css.css"> 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+
+    <script>
+        const quaryString = window.location.search; // 전체 URL중 쿼리스트링(파라미터)만 반환
+        console.log(quaryString)
+        const urlParams = new URLSearchParams(quaryString); // URL의 파라미터를 다룰 수 있는 객체인 URLSearchParams 객체로 변환
+        console.log(urlParams)
+        const _id = urlParams.get("_id"); // URL의 쿼리스트링에서 '파라미터명'으로 조회된 첫번째 값을 리턴
+        console.log(_id)
+        let userId;
+
+        $(document).ready(function () {
+            show_detail();
+
+            if (localStorage.getItem("token")) {
+                getSelf(function (user) {
+                    userId = user.userId;
+                    console.log(userId)
+                })
+            }        
+            show_comments();
+        });
+
+        function show_detail() {
+            $.ajax({
+                type: "GET",
+                url: `/api/detail/${_id}`, // 위에서 추출한 값 전달
+                data: {},
+                success: function (response) {
+                    let rows = response['detail']
+                    console.log(rows);
+
+                        // let articleId = rows['articleId']
+                        let title = rows['title']
+                        let writer = rows['writer']
+                        let date = rows['date'].substring(0,11) //마지막 콤마는 지워줍니다.
+                        let content = rows['content']
+                        
+                        let temp_html = `<div class="title">
+                                                ${title}
+                                            </div>
+                                            <div class="info">
+                                                <dl>
+                                                    <dt>글쓴이</dt>
+                                                    <dd>${writer}</dd>
+                                                </dl>
+                                                <dl>
+                                                    <dt>작성일</dt>
+                                                    <dd>${date}</dd>
+                                                </dl>
+                                            </div>
+                                            <div class="cont">
+                                                ${content}
+                                            </div>
+                        `
+                        $('#details').append(temp_html)
+                }
+            });
+        }
+
+        //댓글 등록
+        function save_comment() {
+            
+            let comment = $('#comment').val()
+
+            if (!comment) {
+                alert("내용을 입력해주세요!")
+                return;
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: `/api/comments/${_id}`,
+                headers: {
+                    authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                data: {
+                    comment: comment, 
+                },
+                success: function (response) {
+                    alert(response['msg'])
+                    window.location.reload();
+                },
+                error: function (error) {
+                    alert(error.responseJSON.errorMessage);
+                    window.location.href = "/login"
+                }
+            });
+        }
+
+
+        //댓글 목록 조회: 비회원도 조회할 수 있도록 함(현재 로그인된 유저가 작성한 댓글의 경우, 수정 삭제버튼이 보여야 함..)
+        function show_comments() {
+            const quaryString = window.location.search; 
+            console.log(quaryString)
+            const urlParams = new URLSearchParams(quaryString); 
+            console.log(urlParams)
+            const postId = urlParams.get("_id"); 
+            console.log(postId)
+
+            const token = localStorage.getItem("token");
+
+            $.ajax({
+                type: "GET",
+                url: `/api/comments/${postId}`,
+                data: {token}, //토큰을 보내주는게 맞는지.. 이렇게 하면 토큰이 가는게 맞는지.. (현재 로그인된 유저의 ID를 얻고싶음..)
+                success: function (response) { 
+                    let rows = response['comments']
+                    let tokenUserId = response['userId']
+                    console.log(rows, tokenUserId);
+
+                    for (const commentObject of rows ) {
+                        postComment(commentObject, tokenUserId)
+                    }
+                },
+                error: function (error) {
+                    alert(error.responseJSON.errorMessage);
+                }
+            });
+        }
+
+        function postComment(commentObject, tokenUserId) {
+            const { _id, comment, userId, postId } = commentObject;
+            
+            if (userId === tokenUserId) { //유저 아이디와 댓글을 작성한 유저ID가 일치할 경우 수정 삭제 버튼이 보이게 함
+                let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${comment}</h5>
+                                        <a href="#" class="btn btn-primary">수정</a>
+                                        <a href="#" class="btn btn-primary">삭제</a>
+                                    </div>
+                                 </div>    
+                        `
+                        $('#comment-box').append(temp_html)
+            } else {
+                let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${comment}</h5>
+                                    </div>
+                                 </div>    
+                        `
+                        $('#comment-box').append(temp_html)
+                }
+            }
+
+
+        
+    </script>
+
+</head>
+
+<body>
+    <div class="board_wrap">
+        <div class="board_title">
+            <strong>Lan's Blog</strong>
+            <p>게시판</p>
+        </div>
+        <div class="board_view_wrap">
+            <div class="board_view" id="details">
+                
+            </div>
+            <div class="bt_wrap">
+                <a href="/" class="on">목록</a>
+                <a onclick="window.location.href = `/edit/?_id=${_id}`">수정</a>  
+            </div>
+        </div>
+    </div>
+
+    <div class="wrap">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" id="comment" placeholder="댓글을 달아보자" aria-label="Recipient's username" aria-describedby="button-addon2">
+            <button class="btn btn-outline-secondary" type="button" id="button-addon2" onclick="save_comment()">댓글등록</button>
+        </div>
+        <div id="comment-box">
+
+        </div>
+
+    </div>
+</body>
+</html>
