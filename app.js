@@ -159,9 +159,11 @@ router.post("/auth", async (req, res) => {
         const { password } = req.body;
     
         const existArticle = await Articles.find({ _id: _id, password: Number(password) });
+        const existComment = await Comments.find({ postId: _id })
 
         if (existArticle.length > 0) {
             await Articles.deleteOne({ _id });
+            await Comments.deleteMany({ postId: _id })
         } else {
             return res.status(400).json({ 
                 success: false, msg: "비밀번호가 일치하지 않습니다!" 
@@ -201,6 +203,53 @@ router.post("/auth", async (req, res) => {
 
 
 
+    //댓글을 수정합니다.
+    router.put("/editComment", authMiddleware, async (req, res) => { 
+        const { comment, commentId } = req.body;  
+        console.log(comment, commentId) 
+        
+        const existComment = await Comments.find({ commentId });  
+
+        if (existComment.length) {
+            await Comments.updateOne({ _id: commentId }, { $set: { comment } });
+        } else {
+            return res.status(400).json({ 
+                success: false, msg: "비밀번호가 일치하지 않습니다!" 
+            });
+        }
+
+        res.json({ 
+            success: true, msg: "수정 완료!" 
+        });
+    });
+
+
+
+    //댓글을 삭제합니다.
+    router.delete("/deleteComment", authMiddleware, async (req, res) => {
+        const { commentId } = req.body;  
+        console.log(commentId)
+    
+        const existComment = await Comments.find({ _id: commentId });
+        console.log(existComment)
+
+        if (existComment.length > 0) {
+            await Comments.deleteOne({ _id: commentId });
+        } else {
+            return res.status(400).json({ 
+                success: false, msg: "비밀번호가 일치하지 않습니다!" 
+            });
+        }
+        
+        res.json({ 
+            success: true, msg: "삭제 완료!" 
+        });
+    });
+
+    
+
+
+
 
 app.use("/api", express.urlencoded({ extended: false }), router);
 app.use(express.static("assets"));
@@ -232,6 +281,6 @@ app.get('/register', (req, res) => {
 });  
 
 
-app.listen(8000, () => {
+app.listen(8080, () => {
   console.log("Server is listening...");
 });

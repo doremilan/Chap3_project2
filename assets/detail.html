@@ -89,6 +89,7 @@
             });
         }
 
+
         //댓글 등록
         function save_comment() {
             
@@ -119,7 +120,9 @@
             });
         }
 
-        //댓글 조회
+
+
+        //댓글 목록 조회
         function show_comments() {
             $.ajax({
                 type: "GET",
@@ -133,26 +136,32 @@
                     for (let i = rows.length-1; i > -1; i--) {
                         let comment = rows[i]['comment']  
                         let commentUserId = rows[i]['userId']
-                        console.log(comment, commentUserId)
+                        let commentId = rows[i]['_id']
+                        console.log(comment, commentUserId, typeof commentId)
 
-                        if (tokenUserId === commentUserId) {
+
+                        if (tokenUserId === commentUserId) { //_id 값은 문자열이기때문에 값을 보내줄때 문자형으로 보내줘야한다.
+                            let temp_html =`<div class="card" style="margin: 10px auto 20px auto;">
+                                                    <div class="card-body">
+                                                        <h5 class="card-title" id="commentInput${commentId}">${comment}</h5>
+                                                        <div id="edit-box${commentId}" style="display: none;">
+                                                            <textarea id="editInput${commentId}" style="width: 910px;">${comment}</textarea>
+                                                            <button onclick="save_editComment('${commentId}')" style="width: 60px;">저장</button>
+                                                        </div>    
+                                                        <button onclick="edit_comment('${commentId}')" id="editbtn${commentId}" class="btn btn-primary">수정</button>
+                                                        <button onclick="delete_comment('${commentId}')" id="deletebtn${commentId}" class="btn btn-primary">삭제</button>
+                                                    </div> 
+                                             </div> 
+                                            `
+                            $('#comment-box').append(temp_html)   
+                        } else {
                             let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
                                                 <div class="card-body">
                                                     <h5 class="card-title">${comment}</h5>
-                                                    <a href="#" id="editComment" class="btn btn-primary">수정</a>
-                                                    <a href="#" id="deleteComment" class="btn btn-primary">삭제</a>
+                                                    <a href="#" id="editComment" class="btn btn-primary" style="display: none;">수정</a>
+                                                    <a href="#" id="deleteComment" class="btn btn-primary" style="display: none;">삭제</a>
                                                 </div>
-                                            </div>    
-                            `
-                            $('#comment-box').append(temp_html)
-                        } else {
-                            let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
-                                <div class="card-body">
-                                    <h5 class="card-title">${comment}</h5>
-                                    <a href="#" id="editComment" class="btn btn-primary" style="display: none;">수정</a>
-                                    <a href="#" id="deleteComment" class="btn btn-primary" style="display: none;">삭제</a>
-                                </div>
-                             </div>    
+                                             </div> 
                             `
                             $('#comment-box').append(temp_html) 
                         } 
@@ -161,61 +170,81 @@
             });
         }
 
-        // function show_comments() {
-        //     const quaryString = window.location.search; 
-        //     console.log(quaryString)
-        //     const urlParams = new URLSearchParams(quaryString); 
-        //     console.log(urlParams)
-        //     const postId = urlParams.get("_id"); 
-        //     console.log(postId)
+        function edit_comment(commentId) {
+            console.log(commentId)
+            $(`#commentInput${commentId}`).hide();
+            $(`#editbtn${commentId}`).hide();
+            $(`#deletebtn${commentId}`).hide();
+            $(`#edit-box${commentId}`).show();
+        };        
 
-        //     $.ajax({
-        //         type: "GET",
-        //         url: `/api/comments/${postId}`,
-        //         data: {}, 
-        //         success: function (response) { 
-        //             let rows = response['comments']
-        //             let tokenUserId = response['userId']
-        //             console.log(rows, tokenUserId);
+        function change_Comment(commentId) {
+            $(`#commentInput${commentId}`).show();
+            $(`#editbtn${commentId}`).show();
+            $(`#deletebtn${commentId}`).show();
+            $(`#edit-box${commentId}`).hide();
+        }        
 
-        //             for (const commentObject of rows ) {
-        //                 postComment(commentObject, tokenUserId)
-        //             }
-        //         },
-        //         error: function (error) {
-        //             alert(error.responseJSON.errorMessage);
-        //         }
-        //     });
-        // }
+        
+        function save_editComment(commentId) {
+            let comment = $(`#editInput${commentId}`).val()
+            console.log(comment)
 
-        // function postComment(commentObject, tokenUserId) {
-        //     const { _id, comment, userId, postId } = commentObject;
-            
-        //     if (userId === tokenUserId) { //유저 아이디와 댓글을 작성한 유저ID가 일치할 경우 수정 삭제 버튼이 보이게 함.. 이방법은 비효율적인지..ㅠㅠ
-        //         let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
-        //                             <div class="card-body">
-        //                                 <h5 class="card-title">${comment}</h5>
-        //                                 <a href="#" class="btn btn-primary">수정</a>
-        //                                 <a href="#" class="btn btn-primary">삭제</a>
-        //                             </div>
-        //                          </div>    
-        //                 `
-        //                 $('#comment-box').append(temp_html)
-        //     } else {
-        //         let temp_html = `<div class="card" style="margin: 10px auto 20px auto;">
-        //                             <div class="card-body">
-        //                                 <h5 class="card-title">${comment}</h5>
-        //                             </div>
-        //                          </div>    
-        //                 `
-        //                 $('#comment-box').append(temp_html)
-        //         }
-        //     }        
+            $.ajax({
+                type: 'PUT',
+                url: "/api/editComment",
+                headers: {
+                    authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                data: {
+                    comment, commentId,
+                },
+                
+                success: function (response) {
+                    alert(response['msg'])
+                    window.location.reload();
+
+                },
+                error:function (response, status, error) {
+                    console.log(response.responseJSON['msg'])
+                    alert(response.responseJSON['msg'])
+                    }
+            });
+            change_Comment(commentId);
+        };
+
+
+        function delete_comment(commentId) {
+            console.log(commentId)
+
+            $.ajax({
+                type: 'DELETE',
+                url: "/api/deleteComment",
+                headers: {
+                    authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                data: {
+                    commentId,
+                },
+                
+                success: function (response) {
+                    alert(response['msg'])
+                    window.location.reload();
+                },
+                error:function (response, status, error) {
+                    console.log(response.responseJSON['msg'])
+                    alert(response.responseJSON['msg'])
+                    }
+            });
+        }
+
     </script>
 
 </head>
 
 <body>
+
+    
     <div class="board_wrap">
         <div class="board_title">
             <strong>Lan's Blog</strong>
@@ -223,7 +252,7 @@
         </div>
         <div class="board_view_wrap">
             <div class="board_view" id="details">
-                
+                                
             </div>
             <div class="bt_wrap">
                 <a href="/" class="on">목록</a>
