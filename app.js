@@ -5,7 +5,7 @@ const Articles = require("./models/article");
 const Comments = require("./models/comment");
 const jwt = require("jsonwebtoken");
 const authMiddleware = require("./middlewares/auth-middleware");
-const user = require("./models/user");
+const Joi = require("joi");
 
 // const token = jwt.sign({ test: true }, "mysecretkey");
 // console.log(token);
@@ -26,35 +26,55 @@ const app = express();
 const router = express.Router();
 
 
+//회원가입
+const postUserSchema = Joi.object({
+    nickname: Joi.string().alphanum().min(3).required(),
+    password: Joi.string().min(4).required(),
+    confirmPassword: Joi.string().required(),
+})
+
 router.post("/users", async (req, res) => {
-    const { nickname, password, confirmPassword } = req.body;
   
-    if (password !== confirmPassword) {
-      res.status(400).send({
-        errorMessage: "패스워드가 패스워드 확인란과 다릅니다.",
-      });
-      return;
+    try {
+        const { nickname, password, confirmPassword } = await postUserSchema.validateAsync(req.body);     
+        if (password !== confirmPassword) {
+            res.status(400).send({
+              errorMessage: "패스워드가 패스워드 확인란과 다릅니다.",
+            });
+            return;
+        }
+
+        else if (password.includes(nickname)) {
+            res.status(400).send({
+                errorMessage: "닉네임과 동일한 비밀번호는 사용할 수 없습니다.",
+            });
+            return;
+        }
+
+          const [existsUsers] = await User.find({ nickname: nickname });   
+          if (existsUsers) {      
+            res.status(400).send({
+              errorMessage: "이미 사용중인 닉네임입니다.",
+            });
+            return;
+          }
+        
+          const user = new User({ nickname, password });
+          await user.save();
+        
+          res.status(201).send({
+              msg : "가입 완료!" 
+          });
+    } catch (err) {
+        console.log(err)
+        res.status(400).send({
+            errorMessage: "요청한 데이터 형식이 올바르지 않습니다."
+        });
     }
-  
-    const [existsUsers] = await User.find({ nickname: nickname });
-
-    if (existsUsers) {
-
-      res.status(400).send({
-        errorMessage: "이미 사용중인 닉네임입니다.",
-      });
-      return;
-    }
-  
-    const user = new User({ nickname, password });
-    await user.save();
-  
-    res.status(201).send({
-        msg : "가입 완료!" 
-    });
-  });
+});
 
 
+//로그인
 router.post("/auth", async (req, res) => {
     const { nickname, password } = req.body;
   
@@ -75,6 +95,7 @@ router.post("/auth", async (req, res) => {
   });    
 
 
+  //사용자 정보조회
   router.get("/users/me", authMiddleware, async (req, res) => {
       console.log(res.locals);  
       const { user } = res.locals;
