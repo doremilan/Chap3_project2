@@ -217,7 +217,8 @@
         function delete_comment(commentId) {
             console.log(commentId)
 
-            $.ajax({
+            if (confirm("정말 삭제하시겠습니까?") === true) {
+                $.ajax({
                 type: 'DELETE',
                 url: "/api/deleteComment",
                 headers: {
@@ -235,7 +236,10 @@
                     console.log(response.responseJSON['msg'])
                     alert(response.responseJSON['msg'])
                     }
-            });
+                });
+            } else {
+                return;
+            }
         }
 
     </script>
