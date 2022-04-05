@@ -13,5 +13,4 @@ UserSchema.set("toJSON", {
   virtuals: true,
 });
 
-
 module.exports = mongoose.model("User", UserSchema);
