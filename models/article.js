@@ -32,6 +32,9 @@ const articlesSchema = mongoose.Schema({
   date: {
     type: String,
   },
+  // image: {
+  //   type: String,
+  // },
   totalLike: {
     type: Number,
     default: 0,

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <script>
+      function upload() {
+        const imageInput = $("#imageInput")[0];
+        // 파일을 여러개 선택할 수 있으므로 files 라는 객체에 담긴다.
+        console.log("imageInput: ", imageInput.files);
+
+        if (imageInput.files.length === 0) {
+          alert("파일은 선택해주세요");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("profile_image", imageInput.files[0]);
+
+        $.ajax({
+          type: "POST",
+          url: "api/upload",
+          processData: false,
+          contentType: false,
+          data: formData,
+          headers: {
+            authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          success: function (rtn) {
+            const message = rtn.data.values[0];
+            console.log("message: ", message);
+            $("#resultUploadPath").text(message.uploadFilePath);
+          },
+          err: function (err) {
+            console.log("err:", err);
+          },
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" id="imageInput" />
+    </form>
+    <button onclick="upload()">업로드</button>
+  </body>
+</html>
